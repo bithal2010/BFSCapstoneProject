@@ -59,13 +59,18 @@ Should we segment users explicitly or model will take care of itself. If yes for
 How should we be handling missing values with WOE or IV ?? How to identify the important variables by WOE?
 Apart from lift chart/gain chart is there any other industry level  evaluation matrix we  are  supposed to use/know?
 What should be approach to work together? End-to-end approach for each of us is feasible or not?
+
 From perspective of performance tags, is the dataset balanced? Percentage of default users is far far less. How to solve this? this to be done after EDA , before modelling  .
 >> Random forest / boosting would take care of it internally. Regression model needs it. 
 >> Up-sampling 
 or 
 >> down-sampling
 or 
->> smote
+>> smote 
+
+Good guidline provided in below link. ROSE package can be used for handling un-balanced dataset.
+
+https://www.analyticsvidhya.com/blog/2016/03/practical-guide-deal-imbalanced-classification-problems/
 
 objective — >  predict what is probability of default if credit card is approved?
 Assumption —> 
