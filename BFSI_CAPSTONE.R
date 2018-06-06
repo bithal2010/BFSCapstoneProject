@@ -104,7 +104,47 @@ str(data_for_eda$house_recency )
 summary(data_for_eda$house_recency )
 
 
+## Checking No.of.dependents ,Presence.of.open.auto.loan
+summary(data_for_eda$No.of.dependents)
+summary(data_for_eda$Presence.of.open.auto.loan)
+## Looking at summary of these attributes, it can be directly factorised
+data_for_eda$No.of.dependents<-as.factor(data_for_eda$No.of.dependents)
+data_for_eda$Presence.of.open.auto.loan<-as.factor(data_for_eda$Presence.of.open.auto.loan)
+data_for_eda$Presence.of.open.home.loan<-as.factor(data_for_eda$Presence.of.open.home.loan)
+
+## Checking Outstanding.Balance ,Total.No.of.Trades
+summary(data_for_eda$Outstanding.Balance)
+summary(data_for_eda$Total.No.of.Trades)
+
+data_for_eda$balance_amount <- 
+  findInterval(data_for_eda$Outstanding.Balance, c(1,2,3,4,5))
+
+data_for_eda$trading_range <- 
+  findInterval(data_for_eda$Total.No.of.Trades, c(1,2,3,4,5))
+
+data_for_eda$balance_amount <-as.factor(data_for_eda$balance_amount )
+data_for_eda$trading_range<-as.factor(data_for_eda$trading_range)
+str(data_for_eda)
+
+woe_data<-data_for_eda[,-which(names(data_for_eda) %in% c('Age','Income','No.of.months.in.current.residence','No.of.months.in.current.company'
+                           ,'Total.No.of.Trades','Outstanding.Balance','Avgas.CC.Utilization.in.last.12.months'
+                           ,'No.of.times.90.DPD.or.worse.in.last.6.months','No.of.times.60.DPD.or.worse.in.last.6.months','No.of.times.30.DPD.or.worse.in.last.6.months'
+                           ,'No.of.times.90.DPD.or.worse.in.last.12.months','No.of.times.60.DPD.or.worse.in.last.12.months','No.of.times.30.DPD.or.worse.in.last.12.months'
+                           ,'No.of.trades.opened.in.last.6.months','No.of.trades.opened.in.last.12.months'
+                           ,'No.of.PL.trades.opened.in.last.6.months','No.of.PL.trades.opened.in.last.6.months'
+                           ,'No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.'
+                           ,'No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.'
+                           ,'No.of.PL.trades.opened.in.last.12.months'))
+                       ]
+
+str(woe_data)
+
+#WOE describes the relationship between a predictive variable and a binary target variable.
+#IV measures the strength of that relationship.
 ## Getting ready fro deriving WOE /IV values for all columns
 install.packages("Information")
 library(Information)
 
+IV <- create_infotables(data=woe_data, y="Performance.Tag.x", bins=10, parallel=FALSE)
+IV_Value = data.frame(IV$Summary)
+gre = data.frame(IV$Tables$gre)
