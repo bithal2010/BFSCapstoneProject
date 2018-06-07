@@ -1,0 +1,237 @@
+> setwd("C:/Users/Rahul Mukherjee/Downloads")
+> library(MASS)
+> library(car)
+> library(e1071)
+> library(caret)
+Loading required package: lattice
+Loading required package: ggplot2
+> library(ggplot2)
+> library(cowplot)
+
+Attaching package: ‘cowplot’
+
+The following object is masked from ‘package:ggplot2’:
+
+    ggsave
+
+> library(caTools)
+> 
+> 
+> demographic<-read.csv("Demographic data.csv",stringsAsFactors = F)
+> credit_beareau<-read.csv("Credit Bureau data.csv",stringsAsFactors = F)
+> str(demographic)
+'data.frame':	71295 obs. of  12 variables:
+ $ Application.ID                             : int  954457215 432830445 941387308 392161677 182011211 312196805 532217204 74788849 782743811 96964957 ...
+ $ Age                                        : int  48 31 32 43 35 20 42 34 30 22 ...
+ $ Gender                                     : chr  "F" "M" "M" "M" ...
+ $ Marital.Status..at.the.time.of.application.: chr  "Married" "Married" "Single" "Married" ...
+ $ No.of.dependents                           : int  2 4 2 1 5 1 2 2 3 1 ...
+ $ Income                                     : num  40 55 46 53 44 39 55 49 48 38 ...
+ $ Education                                  : chr  "Bachelor" "Professional" "Bachelor" "Bachelor" ...
+ $ Profession                                 : chr  "SAL" "SE_PROF" "SE_PROF" "SE" ...
+ $ Type.of.residence                          : chr  "Rented" "Rented" "Rented" "Rented" ...
+ $ No.of.months.in.current.residence          : int  113 112 104 94 112 116 104 108 115 111 ...
+ $ No.of.months.in.current.company            : int  56 46 49 53 43 52 41 40 58 57 ...
+ $ Performance.Tag                            : int  0 0 0 0 0 0 0 0 0 0 ...
+> str(credit_beareau)
+'data.frame':	71295 obs. of  19 variables:
+ $ Application.ID                                                 : int  954457215 432830445 941387308 392161677 182011211 312196805 532217204 74788849 782743811 96964957 ...
+ $ No.of.times.90.DPD.or.worse.in.last.6.months                   : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.times.60.DPD.or.worse.in.last.6.months                   : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.times.30.DPD.or.worse.in.last.6.months                   : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.times.90.DPD.or.worse.in.last.12.months                  : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.times.60.DPD.or.worse.in.last.12.months                  : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.times.30.DPD.or.worse.in.last.12.months                  : int  0 0 0 0 0 0 0 0 1 0 ...
+ $ Avgas.CC.Utilization.in.last.12.months                         : int  4 3 7 11 12 10 11 13 9 6 ...
+ $ No.of.trades.opened.in.last.6.months                           : int  1 1 0 1 0 0 0 1 0 1 ...
+ $ No.of.trades.opened.in.last.12.months                          : int  2 2 0 1 1 0 1 1 0 1 ...
+ $ No.of.PL.trades.opened.in.last.6.months                        : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.PL.trades.opened.in.last.12.months                       : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.Inquiries.in.last.6.months..excluding.home...auto.loans. : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.: int  0 0 0 0 0 0 0 0 0 0 ...
+ $ Presence.of.open.home.loan                                     : int  1 0 1 1 1 0 1 1 1 0 ...
+ $ Outstanding.Balance                                            : int  2999395 3078 3004972 3355373 3014283 2569 3005535 3004790 3007428 170860 ...
+ $ Total.No.of.Trades                                             : int  4 5 2 4 4 1 4 3 2 1 ...
+ $ Presence.of.open.auto.loan                                     : int  0 0 0 1 0 0 0 0 0 1 ...
+ $ Performance.Tag    
+
+
+                                            : int  0 0 0 0 0 0 0 0 0 0 ...
+
+
+
+> nrow(demographic)
+[1] 71295
+> nrow(credit_beareau)
+[1] 71295
+
+
+
+
+> length(unique(tolower(demographic$Application.ID)))
+[1] 71292
+> length(unique(tolower(credit_beareau$Application.ID)))
+[1] 71292
+
+> sum(duplicated(demographic$Application.ID))
+[1] 3
+> 
+> sum(duplicated(credit_beareau$Application.ID))
+[1] 3
+
+##so we have 3 rows in which application id is duplicated.
+
+demographic[duplicated(demographic$Application.ID),]
+
+credit_beareau[duplicated(credit_beareau$Application.ID),]
+
+### 765011468,653287861,671989187 are duplicate application id in both the datasets.
+
+  
+Can application id be duplicate?.As it was stated to be unique one across all customers as per dataset.
+
+
+> setdiff(demographic$Application.ID,credit_beareau$Application.ID)
+integer(0)
+
+##application id are same in both the datasets.
+
+> sum(is.na(demographic))
+[1] 1428
+> 
+> sum(duplicated(demographic))
+[1] 0
+
+ sum(is.na(credit_beareau))
+[1] 3028
+
+ sum(duplicated(credit_beareau))
+[1] 0
+
+ sapply(demographic, function(x) sum(is.na(x)))
+                             Application.ID                                         Age 
+                                          0                                           0 
+                                     Gender Marital.Status..at.the.time.of.application. 
+                                          0                                           0 
+                           No.of.dependents                                      Income 
+                                          3                                           0 
+                                  Education                                  Profession 
+                                          0                                           0 
+                          Type.of.residence           No.of.months.in.current.residence 
+                                          0                                           0 
+            No.of.months.in.current.company                             Performance.Tag 
+                                          0                                        1425 
+
+##all NA in dataset demographic pertain to performance tag only.
+
+> sapply(credit_beareau, function(x) sum(is.na(x)))
+                                                 Application.ID 
+                                                              0 
+                   No.of.times.90.DPD.or.worse.in.last.6.months 
+                                                              0 
+                   No.of.times.60.DPD.or.worse.in.last.6.months 
+                                                              0 
+                   No.of.times.30.DPD.or.worse.in.last.6.months 
+                                                              0 
+                  No.of.times.90.DPD.or.worse.in.last.12.months 
+                                                              0 
+                  No.of.times.60.DPD.or.worse.in.last.12.months 
+                                                              0 
+                  No.of.times.30.DPD.or.worse.in.last.12.months 
+                                                              0 
+                         Avgas.CC.Utilization.in.last.12.months 
+                                                           1058 
+                           No.of.trades.opened.in.last.6.months 
+                                                              1 
+                          No.of.trades.opened.in.last.12.months 
+                                                              0 
+                        No.of.PL.trades.opened.in.last.6.months 
+                                                              0 
+                       No.of.PL.trades.opened.in.last.12.months 
+                                                              0 
+ No.of.Inquiries.in.last.6.months..excluding.home...auto.loans. 
+                                                              0 
+No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. 
+                                                              0 
+                                     Presence.of.open.home.loan 
+                                                            272 
+                                            Outstanding.Balance 
+                                                            272 
+                                             Total.No.of.Trades 
+                                                              0 
+                                     Presence.of.open.auto.loan 
+                                                              0 
+                                                Performance.Tag 
+                                                           1425 
+
+
+##so we find here that performance tag has maximum number of NA and other column is Avgas.CC.Utilization.in.last.12.months.
+
+
+##so we remove performance tag which is NA
+
+demographic<-demographic[!is.na(demographic$Performance.Tag), ]
+##removing from credit bureau as well
+
+credit_beareau<-credit_beareau[!is.na(credit_beareau$Performance.Tag), ]
+
+setdiff(demographic$Application.ID,credit_beareau$Application.ID)  --app id is same.
+sapply(demographic, function(x) sum(is.na(x)))
+sapply(credit_beareau, function(x) sum(is.na(x)))
+
+
+
+----
+
+##open agenda--can we have duplicate application id?
+
+##Analysis on individual columns on demographics dataset
+summary(as.factor(demographic$Age)
+##we need to remove -3 and 0 ages
+
+summary(as.factor(demographic$No.of.dependents))
+summary(as.factor(demographic$Income))--we have negative income..
+
+##open discussion ..we should remove negative income or we should set it as 0 itself?.
+
+summary(as.factor(demographic$Profession))
+summary(as.factor(demographic$Type.of.residence))
+summary(as.factor(demographic$No.of.months.in.current.residence))
+summary(as.factor(demographic$No.of.months.in.current.company))
+summary(as.factor(demographic$Performance.Tag))
+
+  0     1 
+66922  2948
+
+
+
+
+
+
+
+----
+
+##Analysis on individual columns on credit bureau dataset
+
+summary(as.factor(credit_beareau$No.of.times.90.DPD.or.worse.in.last.6.months))
+
+summary(as.factor(credit_beareau$Outstanding.Balance))----it has 272 NA.
+
+summary(as.factor(credit_beareau$Presence.of.open.auto.loan))
+summary(as.factor(credit_beareau$Total.No.of.Trades))
+summary(as.factor(credit_beareau$No.of.times.60.DPD.or.worse.in.last.6.months))
+summary(as.factor(credit_beareau$Presence.of.open.home.loan))--272 NA
+
+summary(as.factor(credit_beareau$Avgas.CC.Utilization.in.last.12.months))---NA presence 1023
+summary(as.factor(credit_beareau$Presence.of.open.auto.loan))
+summary(as.factor(credit_beareau$No.of.times.60.DPD.or.worse.in.last.6.months))
+summary(as.factor(credit_beareau$No.of.times.60.DPD.or.worse.in.last.6.months))
+summary(as.factor(credit_beareau$No.of.times.60.DPD.or.worse.in.last.6.months))
+
+##nothing was found in other columns except av cc utilization was missing
+
+
+
+##need to decide on average cc utilization?do we need to remove the rows or replace with WOE.
+
+
