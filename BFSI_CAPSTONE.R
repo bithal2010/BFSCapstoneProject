@@ -200,14 +200,154 @@ plot_infotables(IV, IV$Summary$Variable[1:5], same_scale=FALSE)
 plot_infotables(IV, IV$Summary$Variable[5:10], same_scale=FALSE)
 plot_infotables(IV, IV$Summary$Variable[10:15], same_scale=FALSE)
 
-## TBD by next mentor call - Univariate analysis
-library(ggplot2)
-ggplot(data_for_eda, aes(x = data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months , fill = factor(data_for_eda$income_group))) + geom_histogram( binwidth = 1)
+## Univariate analysis
 
+table(data_for_eda$Performance.Tag)
+#0     1 
+#66922  2948
+# Data is highly imbalanced. Can be seen from below simple barplot.
+barplot(prop.table(table(data_for_eda$Performance.Tag)))
+
+
+str(data_for_eda)
+
+summary(data_for_eda$Age)
+hist(data_for_eda$Age, xlab = "Age")
+## Users are mostly in 35-55 age range
+
+summary(data_for_eda$Income)
+hist(data_for_eda$Income, xlab = "Income")
+## Users are uniformly distributed in 0-40 range.
+## However population size of high income category 45-60 keep on reducing.
+
+summary(data_for_eda$No.of.months.in.current.residence)
+hist(data_for_eda$No.of.months.in.current.residence, xlab = "No.of.months.in.current.residence")
+## Most users either dont have a house or have recently moved into a new house. 
+## population size keep on reducing with increasing period of stay in current house.
+
+summary(data_for_eda$No.of.months.in.current.company)
+hist(data_for_eda$No.of.months.in.current.company, xlab = "No.of.months.in.current.company")
+## Most users are new job holders with 0-5yr experience. 
+## population size is low in high experience category.
+## Some outliers do exist.
+
+summary(data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months)
+hist(data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months, xlab = "No.of.times.90.DPD.or.worse.in.last.6.months")
+# Most people have no such overdues 
+# Among the very less people who have  90 days overdue, repeating offenders population size is very very small.
+
+
+summary(data_for_eda$No.of.times.60.DPD.or.worse.in.last.6.months)
+hist(data_for_eda$No.of.times.60.DPD.or.worse.in.last.6.months, xlab = "No.of.times.60.DPD.or.worse.in.last.6.months")
+# Most people have no such overdues  
+# repeating offenders population size keep on decreasing with occurances of overdue.
+# compared to 90 days overdues, population size is higher
+
+summary(data_for_eda$No.of.times.30.DPD.or.worse.in.last.6.months)
+hist(data_for_eda$No.of.times.30.DPD.or.worse.in.last.6.months, xlab = "No.of.times.30.DPD.or.worse.in.last.6.months")
+# Most people have no such overdues  
+# repeating offenders population size keep on decreasing with occurances of overdue.
+
+summary(data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months)
+hist(data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months, xlab = "No.of.times.90.DPD.or.worse.in.last.12.months")
+# Most people have no such overdues 
+# Among the very less people who have  90 days overdue, repeating offenders population size is very very small.
+
+
+summary(data_for_eda$No.of.times.60.DPD.or.worse.in.last.12.months)
+hist(data_for_eda$No.of.times.60.DPD.or.worse.in.last.12.months, xlab = "No.of.times.60.DPD.or.worse.in.last.12.months")
+# Most people have no such overdues  
+# repeating offenders population size keep on decreasing with occurances of overdue.
+# compared to 90 days overdues, population size is higher
+
+summary(data_for_eda$No.of.times.30.DPD.or.worse.in.last.12.months)
+hist(data_for_eda$No.of.times.30.DPD.or.worse.in.last.12.months, xlab = "No.of.times.30.DPD.or.worse.in.last.12.months")
+# Most people have no such overdues  
+# repeating offenders population size keep on decreasing with occurances of overdue.
+
+summary(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
+hist(data_for_eda$Avgas.CC.Utilization.in.last.12.months, xlab = "avg cc utilization")
+## most users are utilizing only upto 20% of card upper limit, 
+## population size with proper 25 to 60 % card utilization is similar
+## Some outliers do exist.
+
+summary(data_for_eda$No.of.trades.opened.in.last.6.months)
+hist(data_for_eda$No.of.trades.opened.in.last.6.months, xlab = "No.of.trades.opened.in.last.6.months")
+# most users have 0-4 trades opened in last 6 mon.
+# Outlier might be there.
+
+summary(data_for_eda$No.of.trades.opened.in.last.12.months)
+hist(data_for_eda$No.of.trades.opened.in.last.12.months, xlab = "No.of.trades.opened.in.last.12.months")
+# most users have 0-10 trades opened in last 12 mon.
+# Outlier might be there.
+
+summary(data_for_eda$No.of.PL.trades.opened.in.last.6.months)
+hist(data_for_eda$No.of.PL.trades.opened.in.last.6.months, xlab = "No.of.PL.trades.opened.in.last.6.months")
+# most users have 0-3 PL opened in last 12 mon.
+# Outlier might be there.
+
+summary(data_for_eda$No.of.PL.trades.opened.in.last.12.months)
+hist(data_for_eda$No.of.PL.trades.opened.in.last.12.months, xlab = "No.of.PL.trades.opened.in.last.12.months")
+# most users have 0-6 trades opened in last 12 mon.
+# Outlier might be there.
+
+
+
+summary(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.)
+hist(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans., xlab = "Autoloans-6mon")
+# most users have 0-4 trades opened in last 6 mon.
+# Outlier might be there.
+
+
+summary(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.)
+hist(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans., xlab = "Autoloans-6mon")
+# most users have 0-5 trades opened in last 12 mon.
+# Outlier might be there.
+
+
+str(data_for_eda)
+
+summary(data_for_eda$Total.No.of.Trades)
+hist(data_for_eda$Total.No.of.Trades, xlab = "Total.No.of.Trades")
+# most users have 0-10 trades in total
+# Outlier might be there.
+
+summary(data_for_eda$Outstanding.Balance)
+hist(data_for_eda$Outstanding.Balance, xlab = "Outstanding.Balance")
+# 0-200000 range higher no of users
+# 300k upwards lower no of users
+# most users are starting to repay their loans
+
+ 
 ## TBD by next mentor call- Bivariate/ multi-variate analysis
 
 ## TBD by next mentor call - Correlation analysis
 
-## TBD by next mentor call - SMOTE by ROSE package
+?cor
+
+## TBD by next mentor call - SMOTE(synthetic minority oversampling technique) by ROSE package
+install.packages("ROSE")
+library(ROSE)
+
+table(data_for_eda$Performance.Tag)
+prop.table(table(data_for_eda$Performance.Tag))
+## Only 4% of observations are under default category. So it is ahighly imbalanced data which would result 
+## in in-effictive models if not treated properly.
+
+# Lets do perfrom both oversampling and undersampling i.e.
+# the minority class is oversampled with replacement and majority class is undersampled without replacement.
+
+balanced_data_both <- ovun.sample(Performance.Tag ~ ., data = data_for_eda, method = "both", p=0.5, 
+                                  N= 0.7*nrow(data_for_eda) , seed = 1)$data
+
+
+table(balanced_data_both$Performance.Tag)
+
+#Generate data synthetically to avoid errors related to explicitely mentioned probability
+
+balanced_data_synthetic <- ROSE(Performance.Tag ~ ., data = data_for_eda, seed = 1)$data
+
+table(balanced_data_synthetic$Performance.Tag)
+
 
 ## TBD - model prep and etc..
