@@ -4,7 +4,8 @@
 demographic_df<- read.csv(file = 'Demographic data.csv',header = T,stringsAsFactors = T, na.strings = 'NA')
   
 credit_buraeu_df<- read.csv(file = 'Credit Bureau data.csv',header = T,stringsAsFactors = T, na.strings = 'NA')
-  
+
+# Merging by common attributes and by unique rows  
 master_df<- merge(x = unique(demographic_df), y = unique(credit_buraeu_df), by = c("Application.ID", "Performance.Tag"))
  
 length(master_df$Application.ID) # 71299
@@ -47,6 +48,72 @@ colnames(data_for_eda)
 
 summary(data_for_eda$Age)
 
+############# MISSING VALUE DETECTION AND TREATMENT############################
+missing_val_counts<- sapply(data_for_eda, function(x) sum(is.na(x)))
+## 3 NAs in No.of.dependents
+summary(data_for_eda$No.of.dependents)
+data_for_eda$No.of.dependents[which(is.na(data_for_eda$No.of.dependents)==1)] = 3
+which(is.na(data_for_eda$No.of.dependents)==1)
+
+## 1023 NAs in Avgas.CC.Utilization.in.last.12.months 
+## Assuming nousage by user lets assign value 0 to these avg-cc-utilization values
+
+data_for_eda$Avgas.CC.Utilization.in.last.12.months[which(is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)==1)] = 0
+which(is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)==1)
+
+
+## 1 NA value detected in "No.of.trades.opened.in.last.6.months" column
+which(is.na(data_for_eda$No.of.trades.opened.in.last.6.months)==1)
+data_for_eda$No.of.trades.opened.in.last.6.months[1803]=0
+
+## 272 NAs in Presence.of.open.home.loan 
+## 272 NAs in Outstanding.Balance 
+## Assigning median values to all NA fields for home-loan and Outstanding.Balance columns
+
+data_for_eda$Presence.of.open.home.loan[which(is.na(data_for_eda$Presence.of.open.home.loan)==1)] = 0
+which(is.na(data_for_eda$Presence.of.open.home.loan)==1)
+
+summary(data_for_eda$Outstanding.Balance)
+data_for_eda$Outstanding.Balance[which(is.na(data_for_eda$Outstanding.Balance)==1)] = 774234
+which(is.na(data_for_eda$Outstanding.Balance)==1)
+
+######################## outlier detection and treatment ##########################################
+##Method to find outliers [from stackoverflow]
+FindOutliers <- function(data) {
+  lowerq = quantile(data)[2]
+  upperq = quantile(data)[4]
+  iqr = upperq - lowerq #Or use IQR(data)
+  extreme.threshold.upper = (iqr * 1.5) + upperq
+  extreme.threshold.lower = lowerq - (iqr * 1.5)
+  # we identify extreme outlier indeces
+  result <- which(data > extreme.threshold.upper | data < extreme.threshold.lower)
+}
+
+i_company_recency_outliers <- FindOutliers(data_for_eda$No.of.months.in.current.company)
+i_avg_cc_utilization_outliers <- FindOutliers(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
+i_6mon_trades_outliers <- FindOutliers(data_for_eda$No.of.trades.opened.in.last.6.months)
+i_12mon_trades_outliers <- FindOutliers(data_for_eda$No.of.trades.opened.in.last.12.months)
+i_6mon_pl_outliers <- FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.6.months)
+i_12mon_pl_outliers <- FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.12.months)
+i_6mon_inqr_outliers <- FindOutliers(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.)
+i_12mon_inqr_outliers <- FindOutliers(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.)
+i_total_trd_outliers <- FindOutliers(data_for_eda$Total.No.of.Trades)
+
+data_for_eda$No.of.months.in.current.company[i_company_recency_outliers]
+# [1] 123 121 133 128 126 105
+
+
+
+capOutlier <- function(x){
+  quantiles <- quantile( x, c(.05, .95 ) )
+  x[ x < quantiles[1] ] <- quantiles[1]
+  x[ x > quantiles[2] ] <- quantiles[2]
+} 
+
+## CApping is not workign
+ 
+
+########################Handling Invalid value ###################################
 #Invalid negative/zero value for age column populated for some row i.e. 0, -3
 invalid_age_index <-which(data_for_eda$Age < 10)
 
@@ -81,7 +148,7 @@ data_for_eda$income_group <-as.factor(data_for_eda$income_group)
 str(data_for_eda$income_group )
 summary(data_for_eda$income_group )
 
-
+#################Deriving range/bin variables , then factoring them##################
 #creating new factor column avg_cc_utilization_group from 'Avgas.CC.Utilization.in.last.12.months' column
 summary(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
 ## 1023 NA values found for Avgas.CC.Utilization.in.last.12.months
@@ -121,7 +188,6 @@ summary(data_for_eda$house_recency )
 
 
 ## Checking No.of.dependents ,Presence.of.open.auto.loan
-
 summary(data_for_eda$No.of.dependents)
 ### Assumption 5 - No.of.dependents wherever NA,is substituting  by 0.
 data_for_eda$No.of.dependents[is.na(data_for_eda$No.of.dependents)] <- 0
@@ -154,53 +220,8 @@ data_for_eda$balance_amount <-as.factor(data_for_eda$balance_amount )
 data_for_eda$trading_range<-as.factor(data_for_eda$trading_range)
 str(data_for_eda)
 
-#WOE describes the relationship between a predictive variable and a binary target variable.
-#IV measures the strength of that relationship.
-## Getting ready fro deriving WOE /IV values for all columns
-# install.packages("Information")
 
-woe_data<-data_for_eda[,-which(names(data_for_eda) %in% c('Age','Income','No.of.months.in.current.residence','No.of.months.in.current.company'
-                           ,'Total.No.of.Trades','Outstanding.Balance','Avgas.CC.Utilization.in.last.12.months'
-                           ,'No.of.times.90.DPD.or.worse.in.last.6.months','No.of.times.60.DPD.or.worse.in.last.6.months','No.of.times.30.DPD.or.worse.in.last.6.months'
-                           ,'No.of.times.90.DPD.or.worse.in.last.12.months','No.of.times.60.DPD.or.worse.in.last.12.months','No.of.times.30.DPD.or.worse.in.last.12.months'
-                           ,'No.of.trades.opened.in.last.6.months','No.of.trades.opened.in.last.12.months'
-                           ,'No.of.PL.trades.opened.in.last.6.months','No.of.PL.trades.opened.in.last.6.months'
-                           ,'No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.'
-                           ,'No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.'
-                           ,'No.of.PL.trades.opened.in.last.12.months'))
-                       ]
-
-str(woe_data)
-
-library(Information)
-
-IV <- create_infotables(data=woe_data, y="Performance.Tag", bins=10, parallel=FALSE)
-IV_Value = data.frame(IV$Summary)
-
-Gender.woe = data.frame(IV$Tables$Gender)
-Marital.Status..at.the.time.of.application.woe = data.frame(IV$Tables$Marital.Status..at.the.time.of.application.)
-No.of.dependents.woe = data.frame(IV$Tables$No.of.dependents)
-Education.woe = data.frame(IV$Tables$Education)
-Profession.woe = data.frame(IV$Tables$Profession)
-Type.of.residence.woe = data.frame(IV$Tables$Type.of.residence)
-Presence.of.open.home.loan.woe = data.frame(IV$Tables$Presence.of.open.home.loan)
-Presence.of.open.auto.loan.woe = data.frame(IV$Tables$Presence.of.open.auto.loan)
-
-age_group.woe = data.frame(IV$Tables$age_group)
-income_group.woe = data.frame(IV$Tables$income_group)
-avg_cc_utilization.woe = data.frame(IV$Tables$avg_cc_utilization)
-job_recency.woe = data.frame(IV$Tables$job_recency)
-house_recency.woe = data.frame(IV$Tables$house_recency)
-balance_amount.woe = data.frame(IV$Tables$balance_amount)
-trading_range.woe = data.frame(IV$Tables$trading_range)
-house_recency.woe = data.frame(IV$Tables$house_recency)
-
-#trend of WOE variables by plotting in groups of 5
-plot_infotables(IV, IV$Summary$Variable[1:5], same_scale=FALSE)
-plot_infotables(IV, IV$Summary$Variable[5:10], same_scale=FALSE)
-plot_infotables(IV, IV$Summary$Variable[10:15], same_scale=FALSE)
-
-## Univariate analysis
+##################### Univariate analysis######################################
 
 table(data_for_eda$Performance.Tag)
 #0     1 
@@ -217,115 +238,174 @@ hist(data_for_eda$Age, xlab = "Age")
 
 summary(data_for_eda$Income)
 hist(data_for_eda$Income, xlab = "Income")
+boxplot(data_for_eda$Income)
 ## Users are uniformly distributed in 0-40 range.
 ## However population size of high income category 45-60 keep on reducing.
+## Box plots dont indicate towards any outliers.
+
 
 summary(data_for_eda$No.of.months.in.current.residence)
 hist(data_for_eda$No.of.months.in.current.residence, xlab = "No.of.months.in.current.residence")
+boxplot(data_for_eda$Income)
 ## Most users either dont have a house or have recently moved into a new house. 
 ## population size keep on reducing with increasing period of stay in current house.
 
 summary(data_for_eda$No.of.months.in.current.company)
 hist(data_for_eda$No.of.months.in.current.company, xlab = "No.of.months.in.current.company")
+boxplot(data_for_eda$No.of.months.in.current.company)
 ## Most users are new job holders with 0-5yr experience. 
 ## population size is low in high experience category.
 ## Some outliers do exist.
 
 summary(data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months)
 hist(data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months, xlab = "No.of.times.90.DPD.or.worse.in.last.6.months")
+boxplot(data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months)
 # Most people have no such overdues 
 # Among the very less people who have  90 days overdue, repeating offenders population size is very very small.
 
 
 summary(data_for_eda$No.of.times.60.DPD.or.worse.in.last.6.months)
 hist(data_for_eda$No.of.times.60.DPD.or.worse.in.last.6.months, xlab = "No.of.times.60.DPD.or.worse.in.last.6.months")
+boxplot(data_for_eda$No.of.times.60.DPD.or.worse.in.last.6.months)
 # Most people have no such overdues  
 # repeating offenders population size keep on decreasing with occurances of overdue.
 # compared to 90 days overdues, population size is higher
 
 summary(data_for_eda$No.of.times.30.DPD.or.worse.in.last.6.months)
 hist(data_for_eda$No.of.times.30.DPD.or.worse.in.last.6.months, xlab = "No.of.times.30.DPD.or.worse.in.last.6.months")
+boxplot(data_for_eda$No.of.times.30.DPD.or.worse.in.last.6.months)
 # Most people have no such overdues  
 # repeating offenders population size keep on decreasing with occurances of overdue.
 
 summary(data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months)
 hist(data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months, xlab = "No.of.times.90.DPD.or.worse.in.last.12.months")
+boxplot(data_for_eda$No.of.times.90.DPD.or.worse.in.last.12.months)
 # Most people have no such overdues 
 # Among the very less people who have  90 days overdue, repeating offenders population size is very very small.
 
 
 summary(data_for_eda$No.of.times.60.DPD.or.worse.in.last.12.months)
 hist(data_for_eda$No.of.times.60.DPD.or.worse.in.last.12.months, xlab = "No.of.times.60.DPD.or.worse.in.last.12.months")
+boxplot(data_for_eda$No.of.times.60.DPD.or.worse.in.last.12.months)
 # Most people have no such overdues  
 # repeating offenders population size keep on decreasing with occurances of overdue.
 # compared to 90 days overdues, population size is higher
 
 summary(data_for_eda$No.of.times.30.DPD.or.worse.in.last.12.months)
 hist(data_for_eda$No.of.times.30.DPD.or.worse.in.last.12.months, xlab = "No.of.times.30.DPD.or.worse.in.last.12.months")
+boxplot(data_for_eda$No.of.times.30.DPD.or.worse.in.last.12.months)
 # Most people have no such overdues  
 # repeating offenders population size keep on decreasing with occurances of overdue.
 
 summary(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
 hist(data_for_eda$Avgas.CC.Utilization.in.last.12.months, xlab = "avg cc utilization")
+boxplot(data_for_eda$Avgas.CC.Utilization.in.last.12.months,horizontal = T)
 ## most users are utilizing only upto 20% of card upper limit, 
 ## population size with proper 25 to 60 % card utilization is similar
-## Some outliers do exist.
+## Left skewed ..outliers do exist.
 
 summary(data_for_eda$No.of.trades.opened.in.last.6.months)
 hist(data_for_eda$No.of.trades.opened.in.last.6.months, xlab = "No.of.trades.opened.in.last.6.months")
+boxplot(data_for_eda$No.of.trades.opened.in.last.6.months)
 # most users have 0-4 trades opened in last 6 mon.
-# Outlier might be there.
+# Outlier do exist.
 
 summary(data_for_eda$No.of.trades.opened.in.last.12.months)
 hist(data_for_eda$No.of.trades.opened.in.last.12.months, xlab = "No.of.trades.opened.in.last.12.months")
+boxplot(data_for_eda$No.of.trades.opened.in.last.12.months)
 # most users have 0-10 trades opened in last 12 mon.
-# Outlier might be there.
+# Outlier do exist.
 
 summary(data_for_eda$No.of.PL.trades.opened.in.last.6.months)
 hist(data_for_eda$No.of.PL.trades.opened.in.last.6.months, xlab = "No.of.PL.trades.opened.in.last.6.months")
+boxplot(data_for_eda$No.of.PL.trades.opened.in.last.6.months)
 # most users have 0-3 PL opened in last 12 mon.
-# Outlier might be there.
+# Very few Outlier are there.
 
 summary(data_for_eda$No.of.PL.trades.opened.in.last.12.months)
 hist(data_for_eda$No.of.PL.trades.opened.in.last.12.months, xlab = "No.of.PL.trades.opened.in.last.12.months")
+boxplot(data_for_eda$No.of.PL.trades.opened.in.last.12.months)
 # most users have 0-6 trades opened in last 12 mon.
 # Outlier might be there.
 
 
 
 summary(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.)
-hist(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans., xlab = "Autoloans-6mon")
+hist(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.)
+boxplot(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.,horizontal = T)
 # most users have 0-4 trades opened in last 6 mon.
 # Outlier might be there.
 
 
 summary(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.)
 hist(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans., xlab = "Autoloans-6mon")
+boxplot(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.)
 # most users have 0-5 trades opened in last 12 mon.
-# Outlier might be there.
+# Outlier are present.
 
 
 str(data_for_eda)
 
 summary(data_for_eda$Total.No.of.Trades)
 hist(data_for_eda$Total.No.of.Trades, xlab = "Total.No.of.Trades")
+boxplot(data_for_eda$Total.No.of.Trades)
 # most users have 0-10 trades in total
-# Outlier might be there.
+# Outlier are there.
 
 summary(data_for_eda$Outstanding.Balance)
 hist(data_for_eda$Outstanding.Balance, xlab = "Outstanding.Balance")
+boxplot(data_for_eda$Outstanding.Balance,names = "Outstanding.Balance")
 # 0-200000 range higher no of users
 # 300k upwards lower no of users
 # most users are starting to repay their loans
 
- 
+
+
+############################ WOE /IV analysis ############################
+#WOE The weight of evidence tells the predictive power of 
+# an independent variable in relation to the dependent variable.
+#IV measures the strength of that relationship.
+## Getting ready fro deriving WOE /IV values for all columns
+# install.packages("Information")
+
+
+
+library(Information)
+
+IV <- create_infotables(data=data_for_eda, y="Performance.Tag", bins=10, parallel=FALSE)
+IV_Value = data.frame(IV$Summary)
+
+IV$Tables
+  
+
+#trend of WOE variables by plotting in groups of 5
+plot_infotables(IV, IV$Summary$Variable[1:5], same_scale=FALSE)
+plot_infotables(IV, IV$Summary$Variable[5:10], same_scale=FALSE)
+plot_infotables(IV, IV$Summary$Variable[10:15], same_scale=FALSE)
+
+
 ## TBD by next mentor call- Bivariate/ multi-variate analysis
 
-## TBD by next mentor call - Correlation analysis
+################## Correlation analysis#############################
+#install.packages('corrplot')
+library(corrplot)
+corr_index<- cor(data_for_eda[,c('Age','Income','No.of.months.in.current.residence','No.of.months.in.current.company'
+                   ,'Total.No.of.Trades','Outstanding.Balance','Avgas.CC.Utilization.in.last.12.months'
+                   ,'No.of.times.90.DPD.or.worse.in.last.6.months','No.of.times.60.DPD.or.worse.in.last.6.months','No.of.times.30.DPD.or.worse.in.last.6.months'
+                   ,'No.of.times.90.DPD.or.worse.in.last.12.months','No.of.times.60.DPD.or.worse.in.last.12.months','No.of.times.30.DPD.or.worse.in.last.12.months'
+                   ,'No.of.trades.opened.in.last.6.months','No.of.trades.opened.in.last.12.months'
+                   ,'No.of.PL.trades.opened.in.last.6.months','No.of.PL.trades.opened.in.last.6.months'
+                   ,'No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.'
+                   ,'No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.'
+                   ,'No.of.PL.trades.opened.in.last.12.months')])
 
-?cor
+corrplot(corr_index, type = "upper", tl.pos = "td",
+         method = "circle", tl.cex = 0.01, tl.col = 'black',
+         order = "hclust", diag = FALSE)
 
-## TBD by next mentor call - SMOTE(synthetic minority oversampling technique) by ROSE package
+
+
+###########  SMOTE(synthetic minority oversampling technique) by ROSE package
 install.packages("ROSE")
 library(ROSE)
 
@@ -339,7 +419,6 @@ prop.table(table(data_for_eda$Performance.Tag))
 
 balanced_data_both <- ovun.sample(Performance.Tag ~ ., data = data_for_eda, method = "both", p=0.5, 
                                   N= 0.7*nrow(data_for_eda) , seed = 1)$data
-
 
 table(balanced_data_both$Performance.Tag)
 
