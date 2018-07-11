@@ -6,111 +6,103 @@ demographic_df<- read.csv(file = 'Demographic data.csv',header = T,stringsAsFact
 credit_buraeu_df<- read.csv(file = 'Credit Bureau data.csv',header = T,stringsAsFactors = T, na.strings = 'NA')
 
 # Merging by common attributes and by unique rows  
-master_df<- merge(x = unique(demographic_df), y = unique(credit_buraeu_df), by = c("Application.ID", "Performance.Tag"))
- 
-length(master_df$Application.ID) # 71299
-length(unique(master_df$Application.ID)) # 71292
-t1<-master_df[which(duplicated(master_df$Application.ID)== TRUE),]  # 7 rows
-t2<-master_df[which(duplicated(master_df)== TRUE),] # 0 rows
-# Hence duplicate Application.ID is found , but rows are not identical.
+merged_df<- merge(x = unique(demographic_df)
+                  , y = unique(credit_buraeu_df)
+                  , by = c("Application.ID", "Performance.Tag"))
 
-# Removing duplicate records on basis of duplicated Application.ID by manual observation
-which(duplicated(master_df$Application.ID))
+# Dropping ID column as it is of no use.
+merged_df<-merged_df[,-1]
 
-#[1] 43870 45336 45337 45338 52728 52729 52730
+#Duplicate rows in data - none found.
+sum(duplicated(merged_df))
 
-master_df<- master_df[-c(45336,45338,52729,52730),]
+#Finding rows where dependant variable-"Performance.Tag" is not populated. 
+null_rows<-length(which( is.na(merged_df$Performance.Tag) == TRUE))
 
-#Finding rows where dependant variable is not populated. 
-null_rows<-length(which( is.na(master_df$Performance.Tag) == TRUE))
-
-null_rows/nrow(master_df) 
+null_rows/nrow(merged_df) 
 
 # Only 1.9% of the rows have NA values for dependant variable - 'perfromance.tag'
 # Assumption 1 - So model should be built on data where credit card was approved(0/1). 
 # dependant variable - 'perfromance.tag' = NA for applicants for which credit was not issued in first place.
 # So removing these rows.
 
-data_for_eda <- master_df[!is.na(master_df$Performance.Tag) == TRUE,]
+data_for_eda <- merged_df[!is.na(merged_df$Performance.Tag) == TRUE,]
 
 
 # Getting a summary of master data
 summary(data_for_eda)
 str(data_for_eda)
 
-#Removing ID column - not relevant for analysis.
-data_for_eda<- data_for_eda[-c(1)]
-
-colnames(data_for_eda)
-
-## Let's perform Segmentation/binning of some continuous variables such as - 
-## age, income, avg-cc-utilization,  residency-duration , job-duration etc.
-
-summary(data_for_eda$Age)
 
 ############# MISSING VALUE DETECTION AND TREATMENT############################
 missing_val_counts<- sapply(data_for_eda, function(x) sum(is.na(x)))
-## 3 NAs in No.of.dependents
-summary(data_for_eda$No.of.dependents)
-data_for_eda$No.of.dependents[which(is.na(data_for_eda$No.of.dependents)==1)] = 3
-which(is.na(data_for_eda$No.of.dependents)==1)
 
-## 1023 NAs in Avgas.CC.Utilization.in.last.12.months 
-## Assuming nousage by user lets assign value 0 to these avg-cc-utilization values
-
-data_for_eda$Avgas.CC.Utilization.in.last.12.months[which(is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)==1)] = 0
-which(is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)==1)
-
-
+missing_val_counts
+## 3 NAs found in column - "No.of.dependents"
+## 1023 NAs in Avgas.CC.Utilization.in.last.12.months
 ## 1 NA value detected in "No.of.trades.opened.in.last.6.months" column
-which(is.na(data_for_eda$No.of.trades.opened.in.last.6.months)==1)
-data_for_eda$No.of.trades.opened.in.last.6.months[1803]=0
-
 ## 272 NAs in Presence.of.open.home.loan 
-## 272 NAs in Outstanding.Balance 
-## Assigning median values to all NA fields for home-loan and Outstanding.Balance columns
+## 272 NAs in Outstanding.Balance
 
-data_for_eda$Presence.of.open.home.loan[which(is.na(data_for_eda$Presence.of.open.home.loan)==1)] = 0
-which(is.na(data_for_eda$Presence.of.open.home.loan)==1)
+# For following columns we handle missing values by asssigning median value to respective NA records.
+data_for_eda$No.of.dependents[which(is.na(data_for_eda$No.of.dependents)==1)]<-median(data_for_eda$No.of.dependents, na.rm = T)
+data_for_eda$No.of.trades.opened.in.last.6.months[which(is.na(data_for_eda$No.of.trades.opened.in.last.6.months)==1)]=median(data_for_eda$No.of.trades.opened.in.last.6.months, na.rm = T)
+data_for_eda$Presence.of.open.home.loan[which(is.na(data_for_eda$Presence.of.open.home.loan)==1)] = median(data_for_eda$Presence.of.open.home.loan,na.rm = T)
+data_for_eda$Outstanding.Balance[which(is.na(data_for_eda$Outstanding.Balance)==1)] = median(data_for_eda$Outstanding.Balance,na.rm = T)
 
-summary(data_for_eda$Outstanding.Balance)
-data_for_eda$Outstanding.Balance[which(is.na(data_for_eda$Outstanding.Balance)==1)] = 774234
-which(is.na(data_for_eda$Outstanding.Balance)==1)
+ 
+## Assumption - 2 :
+## NA value in Avgas.CC.Utilization.in.last.12.months  is indicating 
+## no usage of CC by user. So lets assign value 0 to these avg-cc-utilization values
+data_for_eda$Avgas.CC.Utilization.in.last.12.months[which(is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)==1)] = 0
+
 
 ######################## outlier detection and treatment ##########################################
 ##Method to find outliers [from stackoverflow]
 FindOutliers <- function(data) {
-  lowerq = quantile(data)[2]
-  upperq = quantile(data)[4]
+  lowerq = quantile(data,probs = seq(0,1,0.10))[3]  #20%
+  upperq = quantile(data,probs = seq(0,1,0.10))[9]  #80%
   iqr = upperq - lowerq #Or use IQR(data)
   extreme.threshold.upper = (iqr * 1.5) + upperq
   extreme.threshold.lower = lowerq - (iqr * 1.5)
   # we identify extreme outlier indeces
   result <- which(data > extreme.threshold.upper | data < extreme.threshold.lower)
-}
-
-i_company_recency_outliers <- FindOutliers(data_for_eda$No.of.months.in.current.company)
-i_avg_cc_utilization_outliers <- FindOutliers(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
-i_6mon_trades_outliers <- FindOutliers(data_for_eda$No.of.trades.opened.in.last.6.months)
-i_12mon_trades_outliers <- FindOutliers(data_for_eda$No.of.trades.opened.in.last.12.months)
-i_6mon_pl_outliers <- FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.6.months)
-i_12mon_pl_outliers <- FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.12.months)
-i_6mon_inqr_outliers <- FindOutliers(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.)
-i_12mon_inqr_outliers <- FindOutliers(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.)
-i_total_trd_outliers <- FindOutliers(data_for_eda$Total.No.of.Trades)
-
-data_for_eda$No.of.months.in.current.company[i_company_recency_outliers]
-# [1] 123 121 133 128 126 105
-
-
-
-capOutlier <- function(x){
-  quantiles <- quantile( x, c(.05, .95 ) )
-  x[ x < quantiles[1] ] <- quantiles[1]
-  x[ x > quantiles[2] ] <- quantiles[2]
 } 
 
-## CApping is not workign
+company_recency_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.months.in.current.company),]
+avg_cc_utilization_outliers <- data_for_eda[FindOutliers(data_for_eda$Avgas.CC.Utilization.in.last.12.months),]
+last_6mon_trades_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.trades.opened.in.last.6.months),]
+last_12mon_trades_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.trades.opened.in.last.12.months),]
+last_6mon_pl_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.6.months),]
+last_12mon_pl_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.PL.trades.opened.in.last.12.months),]
+last_6mon_inqr_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.),]
+last_12mon_inqr_outliers <- data_for_eda[FindOutliers(data_for_eda$No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.),]
+total_trd_outliers <- data_for_eda[FindOutliers(data_for_eda$Total.No.of.Trades),]
+
+# Some outlier samples 
+company_recency_outliers$No.of.months.in.current.company
+last_6mon_pl_outliers$No.of.PL.trades.opened.in.last.6.months
+total_trd_outliers$Total.No.of.Trades
+
+## Read on Cook's distance
+## Go on case by case basis and check if u want to treat it .
+
+
+## review the WOE code  by someone
+## are they significant according to corr analysis. they both should be giving same results.
+## scatter plot for all columsn.
+
+## corr analysis will indicate the same way for multi variate analysis.
+## https://www.r-bloggers.com/r-tutorial-series-scatterplots/
+#http://r4ds.had.co.nz/exploratory-data-analysis.html
+#https://towardsdatascience.com/simple-fast-exploratory-data-analysis-in-r-with-dataexplorer-package-e055348d9619
+
+#does they have diff credit card?
+#home -car loans impact on default??
+#income variations to default??
+#Find out and Write down the insights like above.
+#sub-population_statistics
+ 
  
 
 ########################Handling Invalid value ###################################
@@ -119,140 +111,114 @@ invalid_age_index <-which(data_for_eda$Age < 10)
 
 #populating median values for all these rows
 ### Assumption 2 - So age value substituted with median values where invalid. 
-data_for_eda$Age[invalid_age_index] <-45
+data_for_eda$Age[invalid_age_index] <-median(data_for_eda$Age,na.rm = T)
 
-#creating new factor column age_group from age column
-data_for_eda$age_group<- findInterval(data_for_eda$Age, c(20, 30, 40,50,60,70))
-
-data_for_eda$age_group<-as.factor(data_for_eda$age_group)
-
-str(data_for_eda$age_group)
-summary(data_for_eda$age_group)
-
-
-#creating new factor column age_group from age column
-summary(data_for_eda$Income)
 
 #Invalid negative/zero value for Income column populated for some row
 invalid_income_index <-which(data_for_eda$Income < 0)
 
 #populating median values for all these rows
-### Assumption 3 - So Income value substituted with median values where invalid. 
-data_for_eda$Income[invalid_income_index] <-27
-summary(data_for_eda$Income)
+### Assumption 3 - So Income value substituted with 0 values where invalid. 
+data_for_eda$Income[invalid_income_index] <-0
+
+### Assumption 4 - The card has not been used by these 1023 persons,so substituting NA by 0.
+data_for_eda$Avgas.CC.Utilization.in.last.12.months[is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)] <- 0
+
+### Assumption 5 - No.of.dependents wherever NA,is substituting  by 0.
+data_for_eda$No.of.dependents[is.na(data_for_eda$No.of.dependents)] <- 0
+
+### Assumption 6 - Presence.of.open.home.loan wherever NA,is substituting  by 0.
+data_for_eda$Presence.of.open.home.loan[is.na(data_for_eda$Presence.of.open.home.loan)] <- 0
+
+### Assumption 7 - Outstanding.Balance wherever NA,is substituting  by 0 value.
+data_for_eda$Outstanding.Balance[is.na(data_for_eda$Outstanding.Balance)] <- 0
+
+#################Deriving range/bin variables , then factoring them##################
+
+## Let's perform Segmentation/binning of some continuous variables such as - 
+## age, income, avg-cc-utilization,  residency-duration , job-duration etc.
+
+#creating new factor column age_group from age column
+
+data_for_eda$age_group<-findInterval(data_for_eda$Age,c(20,30,40,50,60,70))
+
+data_for_eda$age_group<-as.factor(data_for_eda$age_group)
 
 data_for_eda$income_group <- findInterval(data_for_eda$Income, c(10,20,30,40,50,60))
 
 data_for_eda$income_group <-as.factor(data_for_eda$income_group)
 
-str(data_for_eda$income_group )
-summary(data_for_eda$income_group )
-
-#################Deriving range/bin variables , then factoring them##################
-#creating new factor column avg_cc_utilization_group from 'Avgas.CC.Utilization.in.last.12.months' column
-summary(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
-## 1023 NA values found for Avgas.CC.Utilization.in.last.12.months
-### Assumption 4 - The card has not been used by these 1023 persons,so substituting NA by 0.
-data_for_eda$Avgas.CC.Utilization.in.last.12.months[is.na(data_for_eda$Avgas.CC.Utilization.in.last.12.months)] <- 0
-summary(data_for_eda$Avgas.CC.Utilization.in.last.12.months)
 data_for_eda$avg_cc_utilization <- 
-  findInterval(data_for_eda$Avgas.CC.Utilization.in.last.12.months, c(15,30,45,60,75,90,105,120))
+  findInterval(data_for_eda$Avgas.CC.Utilization.in.last.12.months, c(15,30,45,60,75))
 
 data_for_eda$avg_cc_utilization <-as.factor(data_for_eda$avg_cc_utilization)
-
-str(data_for_eda$avg_cc_utilization )
-summary(data_for_eda$avg_cc_utilization )
 
 #creating new factor column job_recency from 'No.of.months.in.current.company' column
 summary(data_for_eda$No.of.months.in.current.company)
 
 data_for_eda$job_recency <- 
-  findInterval(data_for_eda$No.of.months.in.current.company, c(24,48,72,96,120,144))
+  findInterval(data_for_eda$No.of.months.in.current.company,  c(12,24,36,48,60))
 
 data_for_eda$job_recency <-as.factor(data_for_eda$job_recency)
 
-str(data_for_eda$job_recency )
-summary(data_for_eda$job_recency )
-
-
-#creating new factor column house_recency from 'No.of.months.in.current.residence' column
-summary(data_for_eda$No.of.months.in.current.residence)
-
 data_for_eda$house_recency <- 
-  findInterval(data_for_eda$No.of.months.in.current.residence, c(24,48,72,96,120,144))
+  findInterval(data_for_eda$No.of.months.in.current.residence, c(12,24,36,48,60))
 
 data_for_eda$house_recency <-as.factor(data_for_eda$house_recency)
-
-str(data_for_eda$house_recency )
-summary(data_for_eda$house_recency )
-
-
-## Checking No.of.dependents ,Presence.of.open.auto.loan
-summary(data_for_eda$No.of.dependents)
-### Assumption 5 - No.of.dependents wherever NA,is substituting  by 0.
-data_for_eda$No.of.dependents[is.na(data_for_eda$No.of.dependents)] <- 0
-summary(data_for_eda$Presence.of.open.home.loan)
-### Assumption 6 - Presence.of.open.home.loan wherever NA,is substituting  by 0.
-data_for_eda$Presence.of.open.home.loan[is.na(data_for_eda$Presence.of.open.home.loan)] <- 0
-summary(data_for_eda$Presence.of.open.auto.loan)
-## Looking at summary of these attributes, it can be directly factorised
 data_for_eda$No.of.dependents<-as.factor(data_for_eda$No.of.dependents)
 data_for_eda$Presence.of.open.auto.loan<-as.factor(data_for_eda$Presence.of.open.auto.loan)
 data_for_eda$Presence.of.open.home.loan<-as.factor(data_for_eda$Presence.of.open.home.loan)
 
-summary(data_for_eda$No.of.dependents)
-summary(data_for_eda$Presence.of.open.auto.loan)
-summary(data_for_eda$Presence.of.open.home.loan)
-
 ## Checking Outstanding.Balance ,Total.No.of.Trades
-summary(data_for_eda$Outstanding.Balance)
-### Assumption 7 - Outstanding.Balance wherever NA,is substituting  by median value.
-data_for_eda$Outstanding.Balance[is.na(data_for_eda$Outstanding.Balance)] <- 774234
-summary(data_for_eda$Total.No.of.Trades)
-
+quantile(data_for_eda$Outstanding.Balance,probs = seq(0,1,0.20))
 data_for_eda$balance_amount <- 
-  findInterval(data_for_eda$Outstanding.Balance, c(1,2,3,4,5))
+  findInterval(data_for_eda$Outstanding.Balance, c(26113.2,586671.0,774234.5,2960629.6))
+data_for_eda$balance_amount <-as.factor(data_for_eda$balance_amount )
 
 data_for_eda$trading_range <- 
   findInterval(data_for_eda$Total.No.of.Trades, c(1,2,3,4,5))
-
-data_for_eda$balance_amount <-as.factor(data_for_eda$balance_amount )
 data_for_eda$trading_range<-as.factor(data_for_eda$trading_range)
+ 
 str(data_for_eda)
-
-
+# removing the above numeric columns
+#data_for_eda<-  data_for_eda[,-which(names(data_for_eda) %in% c('Age','Income' , 'Avgas.CC.Utilization.in.last.12.months'
+#                                                                        ,'No.of.months.in.current.residence'
+#                                                                        , 'No.of.months.in.current.company'
+#                                                                        ,'Outstanding.Balance'
+#                                                                        ,'Total.No.of.Trades'))]
+#
+#
+str(data_for_eda) 
 ##################### Univariate analysis######################################
-
+library(plyr)
+library(ggplot2)
 table(data_for_eda$Performance.Tag)
 #0     1 
 #66922  2948
 # Data is highly imbalanced. Can be seen from below simple barplot.
-barplot(prop.table(table(data_for_eda$Performance.Tag)))
+barplot(prop.table(table(data_for_eda$Performance.Tag)*100)
+        ,col=c("lightcyan")
+        ,xlab='Performance.Tag'
+        ,ylab='% of Population'
+        )
 
-
-str(data_for_eda)
-
-summary(data_for_eda$Age)
-hist(data_for_eda$Age, xlab = "Age")
+ggplot(data_for_eda, aes(age_group)) + geom_bar()
 ## Users are mostly in 35-55 age range
 
-summary(data_for_eda$Income)
-hist(data_for_eda$Income, xlab = "Income")
-boxplot(data_for_eda$Income)
+ggplot(data_for_eda, aes(income_group)) + geom_bar()
 ## Users are uniformly distributed in 0-40 range.
 ## However population size of high income category 45-60 keep on reducing.
 ## Box plots dont indicate towards any outliers.
 
 
-summary(data_for_eda$No.of.months.in.current.residence)
-hist(data_for_eda$No.of.months.in.current.residence, xlab = "No.of.months.in.current.residence")
-boxplot(data_for_eda$Income)
+ggplot(data_for_eda, aes(house_recency)) + geom_bar()
 ## Most users either dont have a house or have recently moved into a new house. 
 ## population size keep on reducing with increasing period of stay in current house.
 
-summary(data_for_eda$No.of.months.in.current.company)
+ 
 hist(data_for_eda$No.of.months.in.current.company, xlab = "No.of.months.in.current.company")
 boxplot(data_for_eda$No.of.months.in.current.company)
+ggplot(data_for_eda, aes(job_recency)) + geom_bar()
 ## Most users are new job holders with 0-5yr experience. 
 ## population size is low in high experience category.
 ## Some outliers do exist.
@@ -367,46 +333,125 @@ boxplot(data_for_eda$Outstanding.Balance,names = "Outstanding.Balance")
 #IV measures the strength of that relationship.
 ## Getting ready fro deriving WOE /IV values for all columns
 # install.packages("Information")
+#install.packages("gridExtra")
+#install.packages("grid")
+#Information Value	Predictive Power
+#< 0.02	useless for prediction
+#0.02 to 0.1	Weak predictor
+#0.1 to 0.3	Medium predictor
+#0.3 to 0.5	Strong predictor
+#>0.5	Suspicious or too good to be true
 
 
-
+library(gridExtra)
+library(grid)
 library(Information)
 
-IV <- create_infotables(data=data_for_eda, y="Performance.Tag", bins=10, parallel=FALSE)
+IV <- create_infotables(data=data_for_eda, y="Performance.Tag", bins=10, parallel=T)
+
+head(IV)
+
 IV_Value = data.frame(IV$Summary)
+grid.table(IV$Summary[seq(from=1,to=20,by=1),], rows=NULL)
+plot(data.frame(seq(1,5,by=1),seq(6,10,by=1)))
 
-IV$Tables
-  
+plotFrame <- IV$Summary[order(-IV$Summary$IV), ]
+plotFrame$Variable <- factor(plotFrame$Variable,
+                             levels = plotFrame$Variable[order(-plotFrame$IV)])
+ggplot(plotFrame, aes(x = Variable, y = IV)) +
+  geom_bar(width = .35, stat = "identity", color = "darkblue", fill = "white") +
+  ggtitle("Information Value") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10)) +
+  theme(axis.text.x = element_text(angle = 90))
 
-#trend of WOE variables by plotting in groups of 5
-plot_infotables(IV, IV$Summary$Variable[1:5], same_scale=FALSE)
-plot_infotables(IV, IV$Summary$Variable[5:10], same_scale=FALSE)
-plot_infotables(IV, IV$Summary$Variable[10:15], same_scale=FALSE)
 
 
-## TBD by next mentor call- Bivariate/ multi-variate analysis
+##################Correlation analysis#############################
 
-################## Correlation analysis#############################
 #install.packages('corrplot')
 library(corrplot)
-corr_index<- cor(data_for_eda[,c('Age','Income','No.of.months.in.current.residence','No.of.months.in.current.company'
-                   ,'Total.No.of.Trades','Outstanding.Balance','Avgas.CC.Utilization.in.last.12.months'
-                   ,'No.of.times.90.DPD.or.worse.in.last.6.months','No.of.times.60.DPD.or.worse.in.last.6.months','No.of.times.30.DPD.or.worse.in.last.6.months'
-                   ,'No.of.times.90.DPD.or.worse.in.last.12.months','No.of.times.60.DPD.or.worse.in.last.12.months','No.of.times.30.DPD.or.worse.in.last.12.months'
-                   ,'No.of.trades.opened.in.last.6.months','No.of.trades.opened.in.last.12.months'
-                   ,'No.of.PL.trades.opened.in.last.6.months','No.of.PL.trades.opened.in.last.6.months'
-                   ,'No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.'
-                   ,'No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.'
-                   ,'No.of.PL.trades.opened.in.last.12.months')])
+cor_df<-
+  data_for_eda[,c('Age','Income','No.of.months.in.current.residence','No.of.months.in.current.company'
+                  ,'Total.No.of.Trades','Outstanding.Balance','Avgas.CC.Utilization.in.last.12.months'
+                  ,'No.of.times.90.DPD.or.worse.in.last.6.months','No.of.times.60.DPD.or.worse.in.last.6.months','No.of.times.30.DPD.or.worse.in.last.6.months'
+                  ,'No.of.times.90.DPD.or.worse.in.last.12.months','No.of.times.60.DPD.or.worse.in.last.12.months','No.of.times.30.DPD.or.worse.in.last.12.months'
+                  ,'No.of.trades.opened.in.last.6.months','No.of.trades.opened.in.last.12.months'
+                  ,'No.of.PL.trades.opened.in.last.6.months','No.of.PL.trades.opened.in.last.6.months'
+                  ,'No.of.Inquiries.in.last.6.months..excluding.home...auto.loans.'
+                  ,'No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.'
+                  ,'No.of.PL.trades.opened.in.last.12.months')]
+
+corr_index<- cor(cor_df) 
 
 corrplot(corr_index, type = "upper", tl.pos = "td",
          method = "circle", tl.cex = 0.01, tl.col = 'black',
          order = "hclust", diag = FALSE)
 
+colnames(cor_df)
+ 
+#################correlation visible from the plot#####################
+
+#Income >> Negative >> with all other attribute
+#"Total.No.of.Trades" >> Positive >>  "Outstanding.Balance"                                            
+#Outstanding.Balance" >> Positive >>  "Avgas.CC.Utilization.in.last.12.months" 
+#"Avgas.CC.Utilization.in.last.12.months"     >> Positive >>   "No.of.times.90.DPD.or.worse.in.last.6.months"  
+#"No.of.times.90.DPD.or.worse.in.last.6.months"   >> Positive >>    "No.of.times.60.DPD.or.worse.in.last.6.months"                  
+#"No.of.times.30.DPD.or.worse.in.last.12.months"  >> Positive >>  "No.of.trades.opened.in.last.6.months" 
+#"No.of.trades.opened.in.last.6.months"   >> Positive >> "No.of.trades.opened.in.last.12.months" 
+#"No.of.trades.opened.in.last.12.months" >> Positive >>  "No.of.PL.trades.opened.in.last.6.months" 
+#"No.of.PL.trades.opened.in.last.6.months.1" >> Positive >>   "No.of.Inquiries.in.last.6.months..excluding.home...auto.loans." 
+#"No.of.Inquiries.in.last.6.months..excluding.home...auto.loans."  >> Positive >>  "No.of.Inquiries.in.last.12.months..excluding.home...auto.loans."
+#"No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.">> Positive >>  "No.of.PL.trades.opened.in.last.12.months"  
+
+
+
+#################Bi/multi-variate analysis##################################
+
+# Lets look into default users exclusively to see behaviours 
+default_data_for_eda<-data_for_eda[which(data_for_eda$Performance.Tag==1),]
+
+#default_data_for_eda<-  default_data_for_eda[,-which(names(default_data_for_eda) %in% c('Age','Income' 
+#                                                                                        , 'Avgas.CC.Utilization.in.last.12.months' ,'No.of.months.in.current.residence'
+#                                                                                        , 'No.of.months.in.current.company','Outstanding.Balance' 
+#                                                                                        ,'Total.No.of.Trades','Performance.Tag'))]
+
+str(default_data_for_eda)                                                              
+
+b <- ggplot(default_data_for_eda, aes(x = avg_cc_utilization, y = No.of.PL.trades.opened.in.last.12.months))
+# Scatter plot with regression line
+b + geom_point()+  geom_smooth(method = "lm") 
+
+
+
+##plot(cont. var ~ factor var, data = df)<< side by side box plot
+##plot( nume~numer ,data = df)  >>scatter plot
+##aggregate(num~ fact1+fact2 , data = df , FUN = mean)
+##pairs(df[,]) >> df with only numeric variables
+
+#master<-write.csv(x=data_for_eda,file='master.csv')
+ 
+
+plot(data_for_eda$Outstanding.Balance~data_for_eda$Performance.Tag)#clear poistive correlation
+
+plot(data_for_eda$Total.No.of.Trades~data_for_eda$Outstanding.Balance)#clear poistive correlation
+
+plot(data_for_eda$Outstanding.Balance~data_for_eda$Avgas.CC.Utilization.in.last.12.months)# Non-conclusive correltion
+
+plot(data_for_eda$Avgas.CC.Utilization.in.last.12.months~data_for_eda$No.of.times.90.DPD.or.worse.in.last.6.months)
+
+d<-aggregate(data_for_eda$Avgas.CC.Utilization.in.last.12.months~data_for_eda$income_group+data_for_eda$Presence.of.open.home.loan , data= data_for_eda ,FUN=mean)
+
+
+plot(data_for_eda$Avgas.CC.Utilization.in.last.12.months~data_for_eda$income_group+data_for_eda$Presence.of.open.home.loan)
 
 
 ###########  SMOTE(synthetic minority oversampling technique) by ROSE package
-install.packages("ROSE")
+#SMOTE algorithm creates artificial data based on feature space (rather than data space) 
+# similarities from minority samples. It generates a random set of minority class observations 
+# to shift the classifier learning bias towards minority class.
+
+# install.packages("ROSE")
 library(ROSE)
 
 table(data_for_eda$Performance.Tag)
@@ -429,4 +474,118 @@ balanced_data_synthetic <- ROSE(Performance.Tag ~ ., data = data_for_eda, seed =
 table(balanced_data_synthetic$Performance.Tag)
 
 
-## TBD - model prep and etc..
+ 
+###############Picking derived factor columns against original numeric fields ###################
+
+## WILL USE THE balanced_data_synthetic dataframe for Logistic regression modelling.
+# Using the factorised derived attributes rather than original continuous variables
+# age_group vs Age
+# income_group vs Income
+# avg_cc_utilization vs Avgas.CC.Utilization.in.last.12.months
+# house_recency vs No.of.months.in.current.residence
+# job_recency vs No.of.months.in.current.company
+# balance_amount vs Outstanding.Balance 
+# trading_range vs Total.No.of.Trades 
+
+balanced_data_synthetic<- 
+  balanced_data_synthetic[,-which(names(balanced_data_synthetic) %in% c('Age','Income'
+                              , 'Avgas.CC.Utilization.in.last.12.months'
+                              ,'No.of.months.in.current.residence'
+                              , 'No.of.months.in.current.company'
+                              ,'Outstanding.Balance'
+                              ,'Total.No.of.Trades'))]
+
+str(balanced_data_synthetic)
+
+balanced_data_synthetic$Performance.Tag<-as.factor(balanced_data_synthetic$Performance.Tag)
+ 
+
+################Scaling numeric columns & creating dummies for factor attributes#############
+
+num_cols<-c(
+  "No.of.times.90.DPD.or.worse.in.last.6.months"
+  ,"No.of.times.60.DPD.or.worse.in.last.6.months" 
+  , "No.of.times.30.DPD.or.worse.in.last.6.months" 
+  ,"No.of.times.90.DPD.or.worse.in.last.12.months"
+  ,"No.of.times.60.DPD.or.worse.in.last.12.months" 
+  ,"No.of.times.30.DPD.or.worse.in.last.12.months" 
+  ,"No.of.trades.opened.in.last.6.months"
+  ,"No.of.trades.opened.in.last.12.months"
+  ,"No.of.PL.trades.opened.in.last.6.months"
+  ,"No.of.PL.trades.opened.in.last.12.months" 
+  ,"No.of.Inquiries.in.last.6.months..excluding.home...auto.loans."
+  , "No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.")
+
+sapply(balanced_data_synthetic[num_cols], scale)
+
+str(balanced_data_synthetic)
+
+
+fact_cols <- c("Gender","Marital.Status..at.the.time.of.application.",
+          "No.of.dependents","Education","Profession","Type.of.residence",
+          "Presence.of.open.home.loan","Presence.of.open.auto.loan",
+          "age_group","income_group","avg_cc_utilization","job_recency"
+          ,"house_recency","balance_amount","trading_range")
+
+event_col<-c("Performance.Tag") 
+
+balanced_data_synthetic$Performance.Tag
+
+balanced_data_synthetic_fact <- balanced_data_synthetic[fact_cols] 
+
+str(balanced_data_synthetic_fact) 
+
+# creating dummy variables for factor attributes
+dummies<- data.frame(sapply(balanced_data_synthetic_fact, 
+                            function(x) data.frame(model.matrix(~x-1,data =balanced_data_synthetic_fact))[,-1])) 
+
+
+
+balanced_data_synthetic_final<- cbind(balanced_data_synthetic[event_col],balanced_data_synthetic[num_cols],dummies)
+
+str(balanced_data_synthetic_final)
+
+#################### splitting into train and test data for modelling######################
+
+library(caTools)
+
+
+?sample.split
+
+split_indices <- sample.split(balanced_data_synthetic_final, SplitRatio = 7/10)
+
+train <- balanced_data_synthetic_final[split_indices, ]
+
+test <- balanced_data_synthetic_final[!split_indices, ]
+ 
+
+###################Lets create a Logistic Model: Logistic Regression#####################
+
+library(MASS)
+#install.packages('car')
+library(car)
+
+logistic_1 <- glm(Performance.Tag ~ ., family = "binomial", data = train)
+
+summary(logistic_1)
+
+#---------------------------------------------------------    
+
+# Using stepwise algorithm for removing insignificant variables 
+
+logistic_2 <- stepAIC(logistic_1, direction = "both")
+
+
+logistic_3<- glm(Performance.Tag ~ No.of.months.in.current.company + No.of.times.60.DPD.or.worse.in.last.6.months + 
+                   No.of.times.30.DPD.or.worse.in.last.6.months + No.of.times.90.DPD.or.worse.in.last.12.months + 
+                   No.of.times.30.DPD.or.worse.in.last.12.months + Avgas.CC.Utilization.in.last.12.months + 
+                   No.of.trades.opened.in.last.12.months + No.of.PL.trades.opened.in.last.6.months + 
+                   No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.6.months..excluding.home...auto.loans. + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   avg_cc_utilization + trading_range
+                 , family = "binomial", data = train)
+
+summary(logistic_3)
+
+vif(logistic_3)
