@@ -565,6 +565,12 @@ library(MASS)
 #install.packages('car')
 library(car)
 
+ 
+library(e1071)
+library(caret)
+library(caTools)
+
+
 logistic_1 <- glm(Performance.Tag ~ ., family = "binomial", data = train)
 
 summary(logistic_1)
@@ -576,16 +582,485 @@ summary(logistic_1)
 logistic_2 <- stepAIC(logistic_1, direction = "both")
 
 
-logistic_3<- glm(Performance.Tag ~ No.of.months.in.current.company + No.of.times.60.DPD.or.worse.in.last.6.months + 
-                   No.of.times.30.DPD.or.worse.in.last.6.months + No.of.times.90.DPD.or.worse.in.last.12.months + 
-                   No.of.times.30.DPD.or.worse.in.last.12.months + Avgas.CC.Utilization.in.last.12.months + 
-                   No.of.trades.opened.in.last.12.months + No.of.PL.trades.opened.in.last.6.months + 
-                   No.of.PL.trades.opened.in.last.12.months + 
-                   No.of.Inquiries.in.last.6.months..excluding.home...auto.loans. + 
+logistic_3<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
                    No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
-                   avg_cc_utilization + trading_range
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional  + Profession.xSAL+ Profession.xSE + 
+                   Profession.xSE_PROF + Type.of.residence.xCompany.provided + 
+                   Type.of.residence.xLiving.with.Parents + Type.of.residence.xOwned + 
+                   Type.of.residence.xRented + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3 + balance_amount.x4 + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3 + trading_range.x4 + 
+                   trading_range.x5
                  , family = "binomial", data = train)
 
 summary(logistic_3)
 
-vif(logistic_3)
+sort(vif(logistic_3),decreasing = T)
+
+# removing  due to high vif value  - Profession.xSAL 
+
+logistic_4<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional + Profession.xSE + 
+                   Profession.xSE_PROF + Type.of.residence.xCompany.provided + 
+                   Type.of.residence.xLiving.with.Parents + Type.of.residence.xOwned + 
+                   Type.of.residence.xRented + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3 + balance_amount.x4 + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3 + trading_range.x4 + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_4)
+
+sort(vif(logistic_4),decreasing = T)
+
+# removing  due to high vif value  - Type.of.residence.xRented 
+
+logistic_5<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional + Profession.xSE + 
+                   Profession.xSE_PROF + Type.of.residence.xCompany.provided + 
+                   Type.of.residence.xLiving.with.Parents + Type.of.residence.xOwned  + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3 + balance_amount.x4 + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3 + trading_range.x4 + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_5)
+
+sort(vif(logistic_5),decreasing = T)
+
+# Although vif value is high for   - trading_range.x5 
+## due to high P-value we cant remove it.Removing this attribute causes upward swing for AIC value.
+# removing next high vif attr-balance_amount.x4
+logistic_6<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional + Profession.xSE + 
+                   Profession.xSE_PROF + Type.of.residence.xCompany.provided + 
+                   Type.of.residence.xLiving.with.Parents + Type.of.residence.xOwned  + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3  + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3 + trading_range.x4 + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_6)
+
+sort(vif(logistic_6),decreasing = T)
+
+# removing next high vif attr-balance_amount.x4
+logistic_7<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional + Profession.xSE + 
+                   Profession.xSE_PROF + Type.of.residence.xCompany.provided + 
+                   Type.of.residence.xLiving.with.Parents + Type.of.residence.xOwned  + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3  + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3  + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_7)
+
+sort(vif(logistic_7),decreasing = T)
+
+# VIF VALUES ARE LOOKING IS ACCEPTABLE RANGE, LETS REMOVE LOW SIGNIFICANCE
+
+# REMOVING RESIDENCE TYPE ATTRIBUTE due to low significance -
+#Type.of.residence.xCompany.provided  , Type.of.residence.xLiving.with.Parents ,Type.of.residence.xOwned  
+
+
+logistic_8<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + Education.xMasters + Education.xOthers + 
+                   Education.xProfessional + Profession.xSE + 
+                   Profession.xSE_PROF + Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3  + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3  + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_8)
+
+# removing education , proffession params 
+
+logistic_9<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 +  Presence.of.open.home.loan + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5 + job_recency.x1 + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3  + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3  + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_9)
+
+
+# Removing Presence.of.open.home.loan
+
+logistic_10<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                   No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                   No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                   No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                   No.of.dependents.x2 + 
+                   age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                   avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                   avg_cc_utilization.x5  + job_recency.x2 + 
+                   job_recency.x3 + job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                   house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                   balance_amount.x3  + trading_range.x1 + 
+                   trading_range.x2 + trading_range.x3  + 
+                   trading_range.x5
+                 , family = "binomial", data = train)
+
+summary(logistic_10)
+
+
+
+# Removing job_recency.x3
+
+logistic_11<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                    No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                    No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                    No.of.Inquiries.in.last.12.months..excluding.home...auto.loans. + 
+                    No.of.dependents.x2 + 
+                    age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                    avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                    avg_cc_utilization.x5  + job_recency.x2 + 
+                    job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                    house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                    balance_amount.x3  + trading_range.x1 + 
+                    trading_range.x2 + trading_range.x3  + 
+                    trading_range.x5
+                  , family = "binomial", data = train)
+
+summary(logistic_11)
+
+#removing No.of.Inquiries.in.last.12.months..excluding.home...auto.loans.
+
+logistic_12<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                    No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                    No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                    No.of.dependents.x2 + 
+                    age_group.x3 + income_group.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                    avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                    avg_cc_utilization.x5  + job_recency.x2 + 
+                    job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                    house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                    balance_amount.x3  + trading_range.x1 + 
+                    trading_range.x2 + trading_range.x3  + 
+                    trading_range.x5
+                  , family = "binomial", data = train)
+
+summary(logistic_12)
+
+  #removing income_group.x2
+  
+  
+  logistic_13<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                      No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                      No.of.PL.trades.opened.in.last.6.months + No.of.PL.trades.opened.in.last.12.months + 
+                      No.of.dependents.x2 + 
+                      age_group.x3 + income_group.x5 + avg_cc_utilization.x1 + 
+                      avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                      avg_cc_utilization.x5  + job_recency.x2 + 
+                      job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                      house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                      balance_amount.x3  + trading_range.x1 + 
+                      trading_range.x2 + trading_range.x3  + 
+                      trading_range.x5
+                    , family = "binomial", data = train)
+
+summary(logistic_13)  
+
+  #removing  No.of.PL.trades.opened.in.last.6.months
+  logistic_14<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                      No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                      No.of.PL.trades.opened.in.last.12.months + 
+                      No.of.dependents.x2 + 
+                      age_group.x3 + income_group.x5 + avg_cc_utilization.x1 + 
+                      avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                      avg_cc_utilization.x5  + job_recency.x2 + 
+                      job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                      house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                      balance_amount.x3  + trading_range.x1 + 
+                      trading_range.x2 + trading_range.x3  + 
+                      trading_range.x5
+                    , family = "binomial", data = train)
+
+summary(logistic_14)  
+
+ 
+  #removing  No.of.PL.trades.opened.in.last.6.months
+  logistic_15<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                      No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                      No.of.PL.trades.opened.in.last.12.months + 
+                      No.of.dependents.x2 + 
+                      age_group.x3 + income_group.x5 + avg_cc_utilization.x1 + 
+                      avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                      avg_cc_utilization.x5  + 
+                      job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                      house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                      balance_amount.x3  + trading_range.x1 + 
+                      trading_range.x2 + trading_range.x3  + 
+                      trading_range.x5
+                    , family = "binomial", data = train)
+
+summary(logistic_15)   
+  
+
+
+age_group.x3                                  0.079883   0.020607   3.876  0.000117
+trading_range.x3                              -0.167677   0.044080  -3.804 0.000104 ***
+  
+  
+  #removing  age_group.x3
+  logistic_16<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                      No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                      No.of.PL.trades.opened.in.last.12.months + 
+                      No.of.dependents.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                      avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                      avg_cc_utilization.x5  + 
+                      job_recency.x4 + job_recency.x5 + house_recency.x3 + 
+                      house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                      balance_amount.x3  + trading_range.x1 + 
+                      trading_range.x2 + trading_range.x3  + 
+                      trading_range.x5
+                    , family = "binomial", data = train)
+
+summary(logistic_16) 
+
+
+#removing job_recency.x5
+logistic_17<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                    No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                    No.of.PL.trades.opened.in.last.12.months + 
+                    No.of.dependents.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                    avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                    avg_cc_utilization.x5  + 
+                    job_recency.x4  + house_recency.x3 + 
+                    house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                    balance_amount.x3  + trading_range.x1 + 
+                    trading_range.x2 + trading_range.x3  + 
+                    trading_range.x5
+                  , family = "binomial", data = train)
+
+summary(logistic_17) 
+
+
+job_recency.x4                                -0.091114   0.026991  -3.376 0.004222 *** 
+  trading_range.x3  0.000149
+
+#removing job_recency.x4
+logistic_18<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                    No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                    No.of.PL.trades.opened.in.last.12.months + 
+                    No.of.dependents.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                    avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                    avg_cc_utilization.x5  +  house_recency.x3 + 
+                    house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                    balance_amount.x3  + trading_range.x1 + 
+                    trading_range.x2 + trading_range.x3  + 
+                    trading_range.x5
+                  , family = "binomial", data = train)
+
+summary(logistic_18) 
+
+#removing trading_range.x3
+
+logistic_19<- glm(Performance.Tag ~ No.of.times.30.DPD.or.worse.in.last.6.months + 
+                    No.of.times.90.DPD.or.worse.in.last.12.months + No.of.times.30.DPD.or.worse.in.last.12.months + 
+                    No.of.PL.trades.opened.in.last.12.months + 
+                    No.of.dependents.x2 + income_group.x5 + avg_cc_utilization.x1 + 
+                    avg_cc_utilization.x2 + avg_cc_utilization.x3 + avg_cc_utilization.x4 + 
+                    avg_cc_utilization.x5  +  house_recency.x3 + 
+                    house_recency.x5 + balance_amount.x1 + balance_amount.x2 + 
+                    balance_amount.x3  + trading_range.x1 + 
+                    trading_range.x2   +  trading_range.x5
+                  , family = "binomial", data = train)
+
+summary(logistic_19) 
+
+##  significance is very high now for existing attributes.Lets take this model as final LR model for now.
+final_lr_model <- logistic_19
+
+ 
+###  #### #### Model Evaluation with Test Data #### #### ####
+ 
+
+#predicted probabilities  for test data
+test_pred = predict(final_lr_model, type = "response", newdata = test[,-1])
+
+# Let's see the summary 
+summary(test_pred)
+test$prob <- test_pred
+View(test)
+
+# Let's use the probability cutoff of 50%.
+test_pred_default <- factor(ifelse(test_pred >= 0.50, "Yes", "No"))
+test_actual_default <- factor(ifelse(test$Performance.Tag==1,"Yes","No"))
+
+View(test_actual_default)
+View(test_pred_default)
+
+table(test_actual_default,test_pred_default)
+
+conf_mtr_50_cutoff <- confusionMatrix(test_pred_default, test_actual_default, positive = "Yes")
+ 
+conf_mtr_50_cutoff
+ 
+## with 50% cut off 
+## accuracy = 63.3%
+## specificity =  58.2%
+## sensitivity = 68.49%
+## So final model looks like a fairly acceptable model. 
+##  We will manipulate the cut off value to ensure better performance.
+
+
+#########################################################################################
+# Let's Choose the cutoff value. 
+# 
+
+# Let's find out the optimal probalility cutoff 
+
+perform_fn <- function(cutoff) 
+{
+  predicted_default <- factor(ifelse(test_pred >= cutoff, "Yes", "No"))
+  conf <- confusionMatrix(predicted_default, test_actual_default, positive = "Yes")
+  acc <- conf$overall[1]
+  sens <- conf$byClass[1]
+  spec <- conf$byClass[2]
+  out <- t(as.matrix(c(sens, spec, acc))) 
+  colnames(out) <- c("sensitivity", "specificity", "accuracy")
+  return(out)
+}
+
+# Summary of test probability
+
+summary(test_pred)
+# Creating cutoff values from 0.0006769 to 0.9284441 for plotting and initiallizing a matrix of 100 X 3.
+
+
+
+s = seq(.01,.95,length=100)
+
+OUT = matrix(0,100,3)
+
+
+for(i in 1:100)
+{
+  OUT[i,] = perform_fn(s[i])
+} 
+
+
+plot(s, OUT[,1],xlab="Cutoff",ylab="Value",cex.lab=1.5,cex.axis=1.5,ylim=c(0,1),type="l",lwd=2,axes=FALSE,col=2)
+grid(100,10, lwd = 2)
+axis(1,seq(0,1,length=5),seq(0,1,length=5),cex.lab=1.5)
+axis(2,seq(0,1,length=5),seq(0,1,length=5),cex.lab=1.5)
+lines(s,OUT[,2],col="darkgreen",lwd=2)
+lines(s,OUT[,3],col=4,lwd=2)
+box()
+legend(0,.50,col=c(2,"darkgreen",4,"darkred"),lwd=c(2,2,2,2),c("Sensitivity","Specificity","Accuracy"))
+
+ 
+#from grid it looks like cutoff = 0.52
+
+
+test_pred_default <- factor(ifelse(test_pred >= 0.52, "Yes", "No"))
+test_conf <- confusionMatrix(test_pred_default, test_actual_default, positive = "Yes")
+test_conf
+
+# for 52% threshold,  accuracy = 63.26% , specificity = 62.02% , sensitivity = 64.51%
+# So cutoff value is 0.52 for final model
+
+
+##However in this business sceanario out of the 2 types of misclassifications -
+## Someone who is defaulting , and model is saying it ll not default  
+## Someone not defaulting, model says he/she is defaulting   
+ 
+## first miscllassification lead to financial loss
+## second misclassification may lead to follwo up with some customers 
+## and may be some customer dissatisfaction.
+## So higher the sensitivity , the better.
+## from sensitivity-specificity plot grid we can infer that  
+## for high sensitivity -  0.25>=cut-off
+
+high_sensitivity_cutoff <- 0.2 
+high_sens_test_pred_default <- factor(ifelse(test_pred >= high_sensitivity_cutoff, "Yes", "No"))
+test_conf <- confusionMatrix(high_sens_test_pred_default, test_actual_default, positive = "Yes")
+test_conf
+
+
+####################### KS -statistic - Test Data ###################
+
+test_pred_default_1 <- ifelse(test_pred_default=="Yes",1,0)
+test_actual_default_1 <- ifelse(test_actual_default=="Yes",1,0)
+
+##install.packages('ROCR')
+library(ROCR)
+#on testing  data
+pred_object_test<- prediction(test_pred_default_1, test_actual_default_1)
+
+performance_measures_test<- performance(pred_object_test, "tpr", "fpr")
+
+ks_table_test <- attr(performance_measures_test, "y.values")[[1]] - 
+  (attr(performance_measures_test, "x.values")[[1]])
+
+max(ks_table_test)   ## 0.26
+
+#KS-statistic is 26% 
+
+#ROC Curve
+
+plot(performance_measures_test, colorize = TRUE, text.adj = c(-0.2,1.7))
